@@ -103,20 +103,29 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      //解析properties
       propertiesElement(root.evalNode("properties"));
+      //解析settings
       Properties settings = settingsAsProperties(root.evalNode("settings"));
+      //指定自定义vfs实现
       loadCustomVfs(settings);
+      //指定自定义日志实现
       loadCustomLogImpl(settings);
+      //解析typeAlias节点 定义java类型别名
       typeAliasesElement(root.evalNode("typeAliases"));
+      //解析<plugins/>
       pluginElement(root.evalNode("plugins"));
+      //提供结果对象的实例工厂
       objectFactoryElement(root.evalNode("objectFactory"));
       objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
       reflectorFactoryElement(root.evalNode("reflectorFactory"));
       settingsElement(settings);
       // read it after objectFactory and objectWrapperFactory issue #631
       environmentsElement(root.evalNode("environments"));
+      //加载databaseIdProvider
       databaseIdProviderElement(root.evalNode("databaseIdProvider"));
       typeHandlerElement(root.evalNode("typeHandlers"));
+      //解析mappers节点，指定mapper的位置
       mapperElement(root.evalNode("mappers"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);
@@ -157,20 +166,24 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setLogImpl(logImpl);
   }
 
-  private void typeAliasesElement(XNode parent) {
+  private void  typeAliasesElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        //扫描<package/>指定包名
         if ("package".equals(child.getName())) {
           String typeAliasPackage = child.getStringAttribute("name");
           configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);
         } else {
+          //
           String alias = child.getStringAttribute("alias");
           String type = child.getStringAttribute("type");
           try {
             Class<?> clazz = Resources.classForName(type);
             if (alias == null) {
+              //扫描@Alias注解，完成注册
               typeAliasRegistry.registerAlias(clazz);
             } else {
+              //已有的type，注册别名
               typeAliasRegistry.registerAlias(alias, clazz);
             }
           } catch (ClassNotFoundException e) {
@@ -185,6 +198,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         String interceptor = child.getStringAttribute("interceptor");
+        //加载拦截器的属性
         Properties properties = child.getChildrenAsProperties();
         Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).getDeclaredConstructor().newInstance();
         interceptorInstance.setProperties(properties);
@@ -221,9 +235,12 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void propertiesElement(XNode context) throws Exception {
     if (context != null) {
+      //解析<property> 解析name+value
       Properties defaults = context.getChildrenAsProperties();
+      //解析<property>的resource 和url 这俩是干啥的，是用来确定properties文件位置的
       String resource = context.getStringAttribute("resource");
       String url = context.getStringAttribute("url");
+      //这俩同时不空会抛出异常
       if (resource != null && url != null) {
         throw new BuilderException("The properties element cannot specify both a URL and a resource based property file reference.  Please specify one or the other.");
       }
